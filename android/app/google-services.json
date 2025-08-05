@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "911525943345",
+    "project_id": "tripbot-2eded",
+    "storage_bucket": "tripbot-2eded.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:911525943345:android:d594b4c3cc6a82c4e3dd10",
+        "android_client_info": {
+          "package_name": "com.saqib135.TripBot"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "911525943345-3uifhbdo6604vg123dd7r1jp87inafuj.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.saqib135.TripBot",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "911525943345-f4etjm1ng986hqie24vg8umnh5lb448c.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCISbWN6_CTlwEqZikxD87eMWB0YkYBKBU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "911525943345-f4etjm1ng986hqie24vg8umnh5lb448c.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
