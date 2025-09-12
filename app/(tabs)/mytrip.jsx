@@ -3,8 +3,11 @@ import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { getAuth, signOut } from 'firebase/auth';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
   Animated,
   Dimensions,
   FlatList,
@@ -16,12 +19,13 @@ import {
   View
 } from 'react-native';
 import StartNewTrip from '../../components/MyTrips/StartNewTrip';
-
+import { db } from '../../configs/FirebaseConfig'; // Import your Firebase config
 
 const { width } = Dimensions.get('window');
 
 const MyTrip = () => {
   const [userTrips, setUserTrips] = useState([]);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(-20)).current;
@@ -42,7 +46,106 @@ const MyTrip = () => {
     }
   };
 
+  // Function to fetch user trips from Firestore
+ // Updated fetchUserTrips function in MyTrip screen
+const fetchUserTrips = async () => {
+  try {
+    const auth = getAuth();
+    const user = auth.currentUser;
+
+    if (!user) {
+      console.log("No user logged in");
+      setLoading(false);
+      return;
+    }
+
+    // Query trips for the current user
+    const q = query(
+      collection(db, 'UserTrips'),
+      where('uid', '==', user.uid)
+    );
+
+    const querySnapshot = await getDocs(q);
+    const trips = [];
+
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      trips.push({
+        id: doc.id,
+        ...data,
+        // Format the data to match your UI expectations
+        destination: data.destination,
+        dates: `${new Date(data.startDate).toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric' 
+        })} - ${new Date(data.endDate).toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric', 
+          year: 'numeric' 
+        })}`,
+        image: getDestinationEmoji(data.destination), // Function to get emoji based on destination
+        status: new Date(data.startDate) > new Date() ? 'upcoming' : 
+               new Date(data.endDate) < new Date() ? 'completed' : 'ongoing',
+        days: data.totalDays,
+        // IMPORTANT: Make sure to include the travelPlan
+        travelPlan: data.travelPlan,
+        // Include all other fields for the detail view
+        startDate: data.startDate,
+        endDate: data.endDate,
+        travelers: data.travelers,
+        budget: data.budget,
+        createdAt: data.createdAt
+      });
+    });
+
+    // Sort trips by creation date (newest first)
+    trips.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    setUserTrips(trips);
+  } catch (error) {
+    console.error('Error fetching trips:', error);
+    Alert.alert('Error', 'Failed to load your trips');
+  } finally {
+    setLoading(false);
+  }
+};
+
+  // Function to get emoji based on destination
+  const getDestinationEmoji = (destination) => {
+    const country = destination.toLowerCase();
+    if (country.includes('france') || country.includes('paris')) return '🇫🇷';
+    if (country.includes('japan') || country.includes('tokyo')) return '🇯🇵';
+    if (country.includes('england') || country.includes('london') || country.includes('uk')) return '🇬🇧';
+    if (country.includes('italy')) return '🇮🇹';
+    if (country.includes('spain')) return '🇪🇸';
+    if (country.includes('germany')) return '🇩🇪';
+    if (country.includes('usa') || country.includes('america')) return '🇺🇸';
+    if (country.includes('india')) return '🇮🇳';
+    if (country.includes('china')) return '🇨🇳';
+    if (country.includes('australia')) return '🇦🇺';
+    return '🌍'; // Default emoji for unknown destinations
+  };
+
+  // Function to get stats
+  const getStats = () => {
+    const uniqueCountries = [...new Set(userTrips.map(trip => 
+      trip.destination.split(',').pop().trim()
+    ))].length;
+    
+    const totalDays = userTrips.reduce((sum, trip) => sum + parseInt(trip.days || 0), 0);
+
+    return {
+      totalTrips: userTrips.length,
+      countries: uniqueCountries,
+      totalDays: totalDays
+    };
+  };
+
+  const stats = getStats();
+
   useEffect(() => {
+    fetchUserTrips();
+
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -56,28 +159,6 @@ const MyTrip = () => {
       }),
     ]).start();
   }, []);
-
-
-
-  // Mock trip data for when user has trips
-  const mockTrips = [
-    {
-      id: 1,
-      destination: 'Paris, France',
-      dates: 'Dec 15-22, 2024',
-      image: '🇫🇷',
-      status: 'upcoming',
-      days: 7
-    },
-    {
-      id: 2,
-      destination: 'Tokyo, Japan',
-      dates: 'Jan 10-17, 2025',
-      image: '🇯🇵',
-      status: 'planning',
-      days: 8
-    }
-  ];
 
   const renderTripCard = ({ item, index }) => (
     <Animated.View
@@ -93,14 +174,24 @@ const MyTrip = () => {
         }
       ]}
     >
-      <TouchableOpacity style={styles.tripCardContent}>
+      <TouchableOpacity 
+        style={styles.tripCardContent}
+        onPress={() => {
+          // Navigate to trip details page
+          router.push(`/trip-details/${item.id}`);
+        }}
+      >
         <View style={styles.tripImageContainer}>
           <Text style={styles.tripEmoji}>{item.image}</Text>
           <View style={[styles.statusBadge,
-          item.status === 'upcoming' ? styles.upcomingBadge : styles.planningBadge
+            item.status === 'upcoming' ? styles.upcomingBadge : 
+            item.status === 'ongoing' ? styles.ongoingBadge : 
+            item.status === 'completed' ? styles.completedBadge : styles.planningBadge
           ]}>
             <Text style={styles.statusText}>
-              {item.status === 'upcoming' ? 'Upcoming' : 'Planning'}
+              {item.status === 'upcoming' ? 'Upcoming' : 
+               item.status === 'ongoing' ? 'Ongoing' :
+               item.status === 'completed' ? 'Completed' : 'Planning'}
             </Text>
           </View>
         </View>
@@ -113,6 +204,12 @@ const MyTrip = () => {
               <Ionicons name="calendar-outline" size={14} color="#667eea" />
               <Text style={styles.daysText}>{item.days} days</Text>
             </View>
+            {item.budget && (
+              <View style={styles.budgetInfo}>
+                <Ionicons name="wallet-outline" size={14} color="#667eea" />
+                <Text style={styles.budgetText}>{item.budget}</Text>
+              </View>
+            )}
           </View>
         </View>
 
@@ -122,6 +219,27 @@ const MyTrip = () => {
       </TouchableOpacity>
     </Animated.View>
   );
+
+  if (loading) {
+    return (
+      <>
+        <StatusBar barStyle="light-content" backgroundColor="#667eea" />
+        <LinearGradient
+          colors={['#667eea', '#764ba2']}
+          style={styles.headerGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <SafeAreaView style={styles.container}>
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="white" />
+              <Text style={styles.loadingText}>Loading your trips...</Text>
+            </View>
+          </SafeAreaView>
+        </LinearGradient>
+      </>
+    );
+  }
 
   return (
     <>
@@ -177,17 +295,17 @@ const MyTrip = () => {
             {userTrips.length > 0 && (
               <View style={styles.statsContainer}>
                 <View style={styles.statItem}>
-                  <Text style={styles.statNumber}>{userTrips.length}</Text>
+                  <Text style={styles.statNumber}>{stats.totalTrips}</Text>
                   <Text style={styles.statLabel}>Total Trips</Text>
                 </View>
                 <View style={styles.statDivider} />
                 <View style={styles.statItem}>
-                  <Text style={styles.statNumber}>2</Text>
+                  <Text style={styles.statNumber}>{stats.countries}</Text>
                   <Text style={styles.statLabel}>Countries</Text>
                 </View>
                 <View style={styles.statDivider} />
                 <View style={styles.statItem}>
-                  <Text style={styles.statNumber}>15</Text>
+                  <Text style={styles.statNumber}>{stats.totalDays}</Text>
                   <Text style={styles.statLabel}>Days</Text>
                 </View>
               </View>
@@ -203,9 +321,12 @@ const MyTrip = () => {
                 {/* Filter/Sort Header */}
                 <View style={styles.tripsHeader}>
                   <Text style={styles.tripsHeaderTitle}>Your Adventures</Text>
-                  <TouchableOpacity style={styles.filterButton}>
-                    <Ionicons name="filter-outline" size={20} color="#667eea" />
-                    <Text style={styles.filterText}>Filter</Text>
+                  <TouchableOpacity 
+                    style={styles.filterButton}
+                    onPress={fetchUserTrips} // Refresh trips
+                  >
+                    <Ionicons name="refresh-outline" size={20} color="#667eea" />
+                    <Text style={styles.filterText}>Refresh</Text>
                   </TouchableOpacity>
                 </View>
 
@@ -216,6 +337,8 @@ const MyTrip = () => {
                   keyExtractor={(item) => item.id.toString()}
                   showsVerticalScrollIndicator={false}
                   contentContainerStyle={styles.tripsList}
+                  refreshing={loading}
+                  onRefresh={fetchUserTrips}
                 />
 
                 {/* Quick Actions */}
@@ -262,6 +385,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingTop: 30,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: 'white',
+    fontSize: 16,
+    fontFamily: 'poppins',
+    marginTop: 10,
   },
   header: {
     paddingHorizontal: 20,
@@ -415,6 +549,12 @@ const styles = StyleSheet.create({
   upcomingBadge: {
     backgroundColor: '#10ac84',
   },
+  ongoingBadge: {
+    backgroundColor: '#3742fa',
+  },
+  completedBadge: {
+    backgroundColor: '#57606f',
+  },
   planningBadge: {
     backgroundColor: '#ff6b6b',
   },
@@ -443,6 +583,7 @@ const styles = StyleSheet.create({
   tripMeta: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
   },
   daysInfo: {
     flexDirection: 'row',
@@ -451,8 +592,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
+    marginRight: 8,
   },
   daysText: {
+    fontSize: 12,
+    color: '#667eea',
+    fontFamily: 'poppins',
+    marginLeft: 4,
+  },
+  budgetInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0f0f0',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  budgetText: {
     fontSize: 12,
     color: '#667eea',
     fontFamily: 'poppins',
@@ -519,5 +675,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-
 });

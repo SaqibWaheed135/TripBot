@@ -5,15 +5,15 @@ import { useNavigation, useRouter } from 'expo-router';
 import moment from 'moment';
 import { useContext, useEffect, useRef } from 'react';
 import {
-    Animated,
-    Dimensions,
-    SafeAreaView,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Animated,
+  Dimensions,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { CreateTripContext } from '../../context/CreateTripContext';
 
