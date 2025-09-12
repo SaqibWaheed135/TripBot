@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import {
   Alert,
   Dimensions,
+  Image,
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
@@ -31,14 +32,10 @@ const SignIn = () => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-
-
-
   useEffect(() => {
     GoogleSignin.configure({
       webClientId: '911525943345-f4etjm1ng986hqie24vg8umnh5lb448c.apps.googleusercontent.com'
-    }
-    )
+    })
   }, [])
 
   async function onGoogleButtonPress() {
@@ -59,7 +56,6 @@ const SignIn = () => {
       console.log('Signed in user:', user);
       Alert.alert('Sign-in Success');
 
-      // ✅ Navigate to /mytrip after successful sign-in
       router.replace('/mytrip');
     } catch (error) {
       console.error('Google Sign-In Error:', error);
@@ -106,15 +102,15 @@ const SignIn = () => {
   }
 
   return (
-    <>
-      <StatusBar barStyle="light-content" backgroundColor="#667eea" />
-      <LinearGradient
-        colors={['#667eea', '#764ba2', '#f093fb']}
-        style={styles.gradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <SafeAreaView style={styles.container}>
+    <View style={styles.wrapper}>
+      <StatusBar barStyle="light-content" backgroundColor="#667eea" translucent={false} />
+      <SafeAreaView style={styles.safeArea}>
+        <LinearGradient
+          colors={['#667eea', '#764ba2', '#f093fb']}
+          style={styles.gradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={styles.keyboardView}
@@ -122,6 +118,7 @@ const SignIn = () => {
             <ScrollView
               contentContainerStyle={styles.scrollContainer}
               showsVerticalScrollIndicator={false}
+              bounces={false}
             >
               {/* Header */}
               <View style={styles.header}>
@@ -138,7 +135,7 @@ const SignIn = () => {
                 <View style={styles.logoContainer}>
                   <Ionicons name="airplane" size={60} color="white" />
                 </View>
-                <Text style={styles.appName}>AI TripBot</Text>
+                <Text style={styles.appName}>TripBot</Text>
                 <Text style={styles.tagline}>Your Intelligent Travel Companion</Text>
               </View>
 
@@ -228,14 +225,20 @@ const SignIn = () => {
                   <View style={styles.dividerLine} />
                 </View>
 
+                {/* Google Sign In */}
                 <TouchableOpacity
                   style={[styles.googleSignInButton, loading && styles.disabledButton]}
-                  onPress={() => onGoogleButtonPress().then(() => console.log('Signed in with Google!'))}
+                  onPress={() =>
+                    onGoogleButtonPress().then(() => console.log('Signed in with Google!'))
+                  }
                   disabled={loading}
                 >
                   <View style={styles.googleButtonContent}>
                     <View style={styles.googleIconContainer}>
-                      <Ionicons name="logo-google" size={20} color="#4285f4" />
+                      <Image
+                        source={require('../../../assets/images/google_logo.png')}
+                        style={{ width: 30, height: 30 }}
+                      />
                     </View>
                     <Text style={styles.googleButtonText}>
                       {loading ? 'Signing in...' : 'Continue with Google'}
@@ -252,24 +255,26 @@ const SignIn = () => {
                     Don't have an account? <Text style={styles.createAccountLink}>Sign Up</Text>
                   </Text>
                 </TouchableOpacity>
-
-
               </View>
             </ScrollView>
           </KeyboardAvoidingView>
-        </SafeAreaView>
-      </LinearGradient>
-    </>
+        </LinearGradient>
+      </SafeAreaView>
+    </View>
   )
 }
 
 export default SignIn
 
 const styles = StyleSheet.create({
-  gradient: {
+  wrapper: {
+    flex: 1,
+    backgroundColor: '#667eea', // Fallback color
+  },
+  safeArea: {
     flex: 1,
   },
-  container: {
+  gradient: {
     flex: 1,
   },
   keyboardView: {
@@ -278,9 +283,10 @@ const styles = StyleSheet.create({
   scrollContainer: {
     flexGrow: 1,
     paddingHorizontal: 25,
+    minHeight: height - (StatusBar.currentHeight || 0),
   },
   header: {
-    paddingTop: 20,
+    paddingTop: Platform.OS === 'android' ? 20 : 10,
     marginBottom: 20,
   },
   backButton: {
@@ -291,6 +297,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backdropFilter: 'blur(10px)',
+    marginTop:30
   },
   logoSection: {
     alignItems: 'center',
@@ -457,7 +464,6 @@ const styles = StyleSheet.create({
     color: '#667eea',
     fontFamily: 'poppins-Bold',
   },
-
   googleSignInButton: {
     backgroundColor: 'white',
     borderRadius: 15,

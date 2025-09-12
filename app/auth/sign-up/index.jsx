@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import {
   Alert,
   Dimensions,
+  Image,
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
@@ -20,7 +21,6 @@ import {
   View
 } from 'react-native';
 import { auth } from '../../../configs/FirebaseConfig';
-
 
 const { width, height } = Dimensions.get('window');
 
@@ -58,14 +58,13 @@ const SignUp = () => {
       const user = userCredential.user;
 
       console.log('Signed in user:', user);
-      Alert.alert('Sign-in Success');
+      Alert.alert('Sign-up Success');
       router.replace('/mytrip');
     } catch (error) {
-      console.error('Google Sign-In Error:', error);
-      Alert.alert('Google Sign-In Failed', error.message || 'Something went wrong');
+      console.error('Google Sign-Up Error:', error);
+      Alert.alert('Google Sign-Up Failed', error.message || 'Something went wrong');
     }
   };
-
 
   const validateInputs = () => {
     if (!fullName.trim()) {
@@ -131,15 +130,15 @@ const SignUp = () => {
   }
 
   return (
-    <>
-      <StatusBar barStyle="light-content" backgroundColor="#667eea" />
-      <LinearGradient
-        colors={['#667eea', '#764ba2', '#f093fb']}
-        style={styles.gradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <SafeAreaView style={styles.container}>
+    <View style={styles.wrapper}>
+      <StatusBar barStyle="light-content" backgroundColor="#667eea" translucent={false} />
+      <SafeAreaView style={styles.safeArea}>
+        <LinearGradient
+          colors={['#667eea', '#764ba2', '#f093fb']}
+          style={styles.gradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={styles.keyboardView}
@@ -147,6 +146,7 @@ const SignUp = () => {
             <ScrollView
               contentContainerStyle={styles.scrollContainer}
               showsVerticalScrollIndicator={false}
+              bounces={false}
             >
               {/* Header */}
               <View style={styles.header}>
@@ -163,7 +163,7 @@ const SignUp = () => {
                 <View style={styles.logoContainer}>
                   <Ionicons name="person-add" size={50} color="white" />
                 </View>
-                <Text style={styles.appName}>Join AI TripBot</Text>
+                <Text style={styles.appName}>Join TripBot</Text>
                 <Text style={styles.tagline}>Start your intelligent travel journey</Text>
               </View>
 
@@ -305,21 +305,26 @@ const SignUp = () => {
                   <View style={styles.dividerLine} />
                 </View>
 
+                {/* Google Sign Up Button - Updated to match sign-in styling */}
                 <TouchableOpacity
-                  onPress={onGoogleButtonPress}
-                  style={[styles.createAccountButton, { marginTop: -10, marginBottom: 10 }]}
+                  style={[styles.googleSignUpButton, loading && styles.disabledButton]}
+                  onPress={() =>
+                    onGoogleButtonPress().then(() => console.log('Signed up with Google!'))
+                  }
+                  disabled={loading}
                 >
-                  <LinearGradient
-                    colors={['#4285F4', '#34A853']}
-                    style={styles.buttonGradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                  >
-                    <Ionicons name="logo-google" size={20} color="white" style={styles.buttonIcon} />
-                    <Text style={styles.buttonText}>Sign Up with Google</Text>
-                  </LinearGradient>
+                  <View style={styles.googleButtonContent}>
+                    <View style={styles.googleIconContainer}>
+                      <Image
+                        source={require('../../../assets/images/google_logo.png')}
+                        style={{ width: 30, height: 30 }}
+                      />
+                    </View>
+                    <Text style={styles.googleButtonText}>
+                      {loading ? 'Signing up...' : 'Continue with Google'}
+                    </Text>
+                  </View>
                 </TouchableOpacity>
-
 
                 {/* Sign In Button */}
                 <TouchableOpacity
@@ -333,19 +338,23 @@ const SignUp = () => {
               </View>
             </ScrollView>
           </KeyboardAvoidingView>
-        </SafeAreaView>
-      </LinearGradient>
-    </>
+        </LinearGradient>
+      </SafeAreaView>
+    </View>
   )
 }
 
 export default SignUp
 
 const styles = StyleSheet.create({
-  gradient: {
+  wrapper: {
+    flex: 1,
+    backgroundColor: '#667eea', // Fallback color
+  },
+  safeArea: {
     flex: 1,
   },
-  container: {
+  gradient: {
     flex: 1,
   },
   keyboardView: {
@@ -355,9 +364,10 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: 25,
     paddingBottom: 30,
+    minHeight: height - (StatusBar.currentHeight || 0),
   },
   header: {
-    paddingTop: 20,
+    paddingTop: Platform.OS === 'android' ? 20 : 10,
     marginBottom: 20,
   },
   backButton: {
@@ -368,6 +378,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backdropFilter: 'blur(10px)',
+    marginTop: 30
   },
   logoSection: {
     alignItems: 'center',
@@ -392,7 +403,6 @@ const styles = StyleSheet.create({
   },
   appName: {
     fontSize: 28,
-    fontWeight: 'bold',
     color: 'white',
     textAlign: 'center',
     fontFamily: 'poppins-Bold',
@@ -420,7 +430,6 @@ const styles = StyleSheet.create({
   },
   formTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
     color: '#333',
     textAlign: 'center',
     marginBottom: 5,
@@ -440,7 +449,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333',
     marginBottom: 8,
-    fontFamily: 'poppins-Bold',
+    fontFamily: 'poppins-Medium',
     fontWeight: '500',
   },
   inputWrapper: {
@@ -500,7 +509,7 @@ const styles = StyleSheet.create({
   },
   termsLink: {
     color: '#667eea',
-    fontWeight: 'bold',
+    fontFamily: 'poppins-Bold',
   },
   createAccountButton: {
     borderRadius: 15,
@@ -525,7 +534,6 @@ const styles = StyleSheet.create({
   buttonText: {
     color: 'white',
     fontSize: 18,
-    fontWeight: 'bold',
     fontFamily: 'poppins-Bold',
   },
   buttonIcon: {
@@ -550,6 +558,41 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'poppins',
   },
+  // Updated Google button styling to match sign-in
+  googleSignUpButton: {
+    backgroundColor: 'white',
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 5,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  googleButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 18,
+    paddingHorizontal: 30,
+  },
+  googleIconContainer: {
+    marginRight: 15,
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  googleButtonText: {
+    color: '#333',
+    fontSize: 16,
+    fontFamily: 'poppins-Bold',
+  },
   signInButton: {
     alignItems: 'center',
     paddingVertical: 15,
@@ -561,7 +604,6 @@ const styles = StyleSheet.create({
   },
   signInLink: {
     color: '#667eea',
-    fontWeight: 'bold',
     fontFamily: 'poppins-Bold',
   },
 });

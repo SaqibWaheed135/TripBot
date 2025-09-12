@@ -1,9 +1,9 @@
-// TripDetails.js - Create this file in your app/trip-details/[id].js or similar route
+// app/trip-details/[id].js
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { getAuth } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import moment from 'moment';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -11,6 +11,8 @@ import {
     Alert,
     Animated,
     Dimensions,
+    Image,
+    Modal,
     SafeAreaView,
     ScrollView,
     Share,
@@ -20,12 +22,12 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { app, db } from '../../configs/FirebaseConfig.jsx';
+import { app, db } from '../../../configs/FirebaseConfig.jsx';
 
 const { width } = Dimensions.get('window');
 
 const TripDetails = () => {
-    const { id } = useLocalSearchParams(); // Get trip ID from route params
+    const { id } = useLocalSearchParams();
     const navigation = useNavigation();
     const router = useRouter();
     const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -34,10 +36,18 @@ const TripDetails = () => {
 
     // States
     const [tripData, setTripData] = useState(null);
-    const [travelPlan, setTravelPlan] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [parsedPlan, setParsedPlan] = useState(null);
+    const [placeImages, setPlaceImages] = useState({});
+    const [hotelImages, setHotelImages] = useState({});
+    const [loadingImages, setLoadingImages] = useState(false);
+    
+    // New enhanced states
+    const [isFavorite, setIsFavorite] = useState(false);
+    const [isSaved, setIsSaved] = useState(false);
+    const [showShareModal, setShowShareModal] = useState(false);
+    const [isProcessingFavorite, setIsProcessingFavorite] = useState(false);
 
     useEffect(() => {
         navigation.setOptions({
@@ -53,15 +63,28 @@ const TripDetails = () => {
                 </TouchableOpacity>
             ),
             headerRight: () => (
-                <TouchableOpacity
-                    onPress={handleShare}
-                    style={styles.shareButton}
-                >
-                    <Ionicons name="share" size={24} color="white" />
-                </TouchableOpacity>
+                <View style={styles.headerRightContainer}>
+                    <TouchableOpacity
+                        onPress={handleFavoriteToggle}
+                        style={[styles.headerButton, isProcessingFavorite && styles.headerButtonDisabled]}
+                        disabled={isProcessingFavorite}
+                    >
+                        <Ionicons 
+                            name={isFavorite ? "heart" : "heart-outline"} 
+                            size={24} 
+                            color={isFavorite ? "#ff6b6b" : "white"} 
+                        />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        onPress={() => setShowShareModal(true)}
+                        style={styles.headerButton}
+                    >
+                        <Ionicons name="share" size={24} color="white" />
+                    </TouchableOpacity>
+                </View>
             ),
         });
-    }, [travelPlan]);
+    }, [isFavorite, isProcessingFavorite, tripData]);
 
     useEffect(() => {
         Animated.parallel([
@@ -90,7 +113,6 @@ const TripDetails = () => {
         }
     }, [id]);
 
-    // Fetch trip details from Firestore
     const fetchTripDetails = async () => {
         try {
             setLoading(true);
@@ -98,52 +120,207 @@ const TripDetails = () => {
             const user = auth.currentUser;
 
             if (!user) {
-                Alert.alert("Login Required", "Please log in to view trip details.");
-                router.replace('/auth/sign-in');
+                setError('Please login to view trip details');
                 return;
             }
 
-            // Get trip document from Firestore
-            const tripDoc = await getDoc(doc(db, 'UserTrips', id));
-            
-            if (!tripDoc.exists()) {
+            const tripRef = doc(db, 'UserTrips', id);
+            const tripSnap = await getDoc(tripRef);
+
+            if (tripSnap.exists()) {
+                const data = tripSnap.data();
+                setTripData({ id: tripSnap.id, ...data });
+                setIsFavorite(data.isFavorite || false);
+                setIsSaved(true); // Trip exists in database, so it's saved
+
+                // Parse the travel plan
+                if (data.travelPlan) {
+                    await parseTravelPlanWithImages(data.travelPlan);
+                }
+            } else {
                 setError('Trip not found');
-                return;
             }
-
-            const tripData = tripDoc.data();
-            
-            // Verify the trip belongs to current user
-            if (tripData.uid !== user.uid) {
-                setError('You do not have permission to view this trip');
-                return;
-            }
-
-            setTripData(tripData);
-            setTravelPlan(tripData.travelPlan || '');
-            
-            // Parse the travel plan for better display
-            if (tripData.travelPlan) {
-                parseTravelPlan(tripData.travelPlan);
-            }
-
-        } catch (error) {
-            console.error('Error fetching trip details:', error);
+        } catch (err) {
+            console.error('Error fetching trip:', err);
             setError('Failed to load trip details');
-            Alert.alert("Error", `Failed to load trip details: ${error.message}`);
         } finally {
             setLoading(false);
         }
     };
 
-    const parseTravelPlan = (plan) => {
+    // Toggle favorite status
+    const handleFavoriteToggle = async () => {
+        if (!id || isProcessingFavorite) return;
+        
+        setIsProcessingFavorite(true);
+        
+        try {
+            const newFavoriteStatus = !isFavorite;
+            
+            // Update in Firestore
+            await updateDoc(doc(db, 'UserTrips', id), {
+                isFavorite: newFavoriteStatus,
+                favoriteUpdatedAt: new Date().toISOString()
+            });
+            
+            setIsFavorite(newFavoriteStatus);
+            
+            // Show feedback
+            Alert.alert(
+                newFavoriteStatus ? "Added to Favorites" : "Removed from Favorites",
+                newFavoriteStatus 
+                    ? "This trip has been added to your favorites!" 
+                    : "This trip has been removed from your favorites."
+            );
+            
+        } catch (error) {
+            console.error("Error toggling favorite:", error);
+            Alert.alert("Error", "Failed to update favorite status. Please try again.");
+        } finally {
+            setIsProcessingFavorite(false);
+        }
+    };
+
+    // Enhanced share functionality
+    const handleShare = async (shareType = 'default') => {
+        if (!tripData?.travelPlan) return;
+        
+        try {
+            let shareContent = '';
+            
+            switch (shareType) {
+                case 'summary':
+                    shareContent = `🌟 My AI-Generated Travel Plan\n\n` +
+                        `📍 Destination: ${tripData?.destination}\n` +
+                        `📅 Duration: ${tripData?.totalDays} days\n` +
+                        `👥 Travelers: ${tripData?.travelers}\n` +
+                        `💰 Budget: ${tripData?.budget}\n\n` +
+                        `✨ Created with AI Travel Planner`;
+                    break;
+                
+                case 'full':
+                    shareContent = `🌟 My Complete Travel Plan for ${tripData?.destination}\n\n${tripData.travelPlan}`;
+                    break;
+                
+                case 'link':
+                    // This would be used if you have a web version or deep linking
+                    shareContent = `Check out my travel plan for ${tripData?.destination}!\n\n` +
+                        `📱 View full details: [Your App Link Here]`;
+                    break;
+                
+                default:
+                    shareContent = `🌟 Check out my travel plan for ${tripData?.destination}!\n\n` +
+                        `📅 ${tripData?.totalDays} days of amazing experiences\n` +
+                        `👥 Perfect for ${tripData?.travelers}\n\n` +
+                        `✨ Created with AI Travel Planner`;
+            }
+
+            const result = await Share.share({
+                message: shareContent,
+                title: `Travel Plan - ${tripData?.destination}`,
+                url: '', // Add your app's deep link if available
+            });
+
+            // Track share if successful
+            if (result.action === Share.sharedAction && id) {
+                const currentTripRef = doc(db, 'UserTrips', id);
+                const currentTripSnap = await getDoc(currentTripRef);
+                const currentShareCount = currentTripSnap.data()?.shareCount || 0;
+                
+                await updateDoc(currentTripRef, {
+                    shareCount: currentShareCount + 1,
+                    lastShared: new Date().toISOString()
+                });
+            }
+
+            setShowShareModal(false);
+
+        } catch (error) {
+            console.error('Error sharing:', error);
+            Alert.alert("Error", "Failed to share. Please try again.");
+        }
+    };
+
+    // Function to fetch images from Unsplash
+    const fetchDestinationImages = async (query, type = 'places') => {
+        try {
+            const UNSPLASH_ACCESS_KEY = 'YOUR_UNSPLASH_ACCESS_KEY'; // Replace with your key
+            const response = await fetch(
+                `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=5&orientation=landscape`,
+                {
+                    headers: {
+                        'Authorization': `Client-ID ${UNSPLASH_ACCESS_KEY}`
+                    }
+                }
+            );
+
+            if (response.ok) {
+                const data = await response.json();
+                return data.results.map(img => ({
+                    id: img.id,
+                    url: img.urls.regular,
+                    thumbnail: img.urls.small,
+                    description: img.description || img.alt_description,
+                    photographer: img.user.name
+                }));
+            }
+        } catch (error) {
+            console.log('Error fetching images:', error);
+        }
+
+        // Fallback to placeholder images
+        return getPlaceholderImages(query, type);
+    };
+
+    // Fallback placeholder images
+    const getPlaceholderImages = (query, type) => {
+        const placeholderImages = {
+            places: [
+                { id: '1', url: 'https://picsum.photos/400/300?random=1', description: `${query} landmark` },
+                { id: '2', url: 'https://picsum.photos/400/300?random=2', description: `${query} attraction` },
+                { id: '3', url: 'https://picsum.photos/400/300?random=3', description: `${query} scenery` },
+            ],
+            hotels: [
+                { id: '1', url: 'https://picsum.photos/400/300?random=10', description: `Hotel in ${query}` },
+                { id: '2', url: 'https://picsum.photos/400/300?random=11', description: `Accommodation in ${query}` },
+                { id: '3', url: 'https://picsum.photos/400/300?random=12', description: `Resort in ${query}` },
+            ],
+        };
+
+        return placeholderImages[type] || placeholderImages.places;
+    };
+
+    const parseTravelPlanWithImages = async (plan) => {
+        setLoadingImages(true);
+
         const lines = plan.split('\n');
         const sections = [];
         let currentSection = null;
 
+        // Extract data for image fetching
+        const extractedPlaces = new Set();
+        const extractedHotels = new Set();
+        const extractedActivities = new Set();
+
         lines.forEach(line => {
             const trimmedLine = line.trim();
             if (!trimmedLine) return;
+
+            // Extract specific information for images
+            if (trimmedLine.includes('HOTEL_NAME:')) {
+                const hotel = trimmedLine.replace('HOTEL_NAME:', '').trim();
+                if (hotel) extractedHotels.add(hotel);
+            }
+
+            if (trimmedLine.includes('PLACE_NAME:')) {
+                const place = trimmedLine.replace('PLACE_NAME:', '').trim();
+                if (place) extractedPlaces.add(place);
+            }
+
+            if (trimmedLine.includes('ACTIVITY_NAME:')) {
+                const activity = trimmedLine.replace('ACTIVITY_NAME:', '').trim();
+                if (activity) extractedActivities.add(activity);
+            }
 
             // Parse sections based on structure
             if (trimmedLine.includes('**SECTION_') ||
@@ -179,6 +356,52 @@ const TripDetails = () => {
         }
 
         setParsedPlan(sections);
+
+        // Fetch images for different categories
+        try {
+            const destinationName = tripData?.destination || 'travel destination';
+
+            // Fetch place images
+            const placeImagePromises = Array.from(extractedPlaces).slice(0, 8).map(async (place) => {
+                const images = await fetchDestinationImages(`${place} ${destinationName}`, 'places');
+                return { place, images };
+            });
+
+            // Fetch hotel images
+            const hotelImagePromises = Array.from(extractedHotels).slice(0, 6).map(async (hotel) => {
+                const images = await fetchDestinationImages(`${hotel} hotel ${destinationName}`, 'hotels');
+                return { hotel, images };
+            });
+
+            // Add general destination images
+            const generalImages = await fetchDestinationImages(destinationName, 'places');
+
+            const placeResults = await Promise.all(placeImagePromises);
+            const hotelResults = await Promise.all(hotelImagePromises);
+
+            // Organize images
+            const newPlaceImages = {
+                general: generalImages,
+                activities: {}
+            };
+            const newHotelImages = {};
+
+            placeResults.forEach(({ place, images }) => {
+                newPlaceImages[place] = images;
+            });
+
+            hotelResults.forEach(({ hotel, images }) => {
+                newHotelImages[hotel] = images;
+            });
+
+            setPlaceImages(newPlaceImages);
+            setHotelImages(newHotelImages);
+
+        } catch (error) {
+            console.log('Error fetching images:', error);
+        }
+
+        setLoadingImages(false);
     };
 
     const getSectionType = (line) => {
@@ -192,17 +415,120 @@ const TripDetails = () => {
         return 'general';
     };
 
-    const handleShare = async () => {
-        if (travelPlan && tripData) {
-            try {
-                await Share.share({
-                    message: `My Travel Plan for ${tripData.destination}\n\n${travelPlan}`,
-                    title: 'My Saved Travel Plan'
-                });
-            } catch (error) {
-                console.log('Error sharing:', error.message);
-            }
-        }
+    // Share Modal Component
+    const ShareModal = () => (
+        <Modal
+            animationType="slide"
+            transparent={true}
+            visible={showShareModal}
+            onRequestClose={() => setShowShareModal(false)}
+        >
+            <View style={styles.modalOverlay}>
+                <View style={styles.modalContent}>
+                    <View style={styles.modalHeader}>
+                        <Text style={styles.modalTitle}>Share Your Trip</Text>
+                        <TouchableOpacity
+                            onPress={() => setShowShareModal(false)}
+                            style={styles.modalCloseButton}
+                        >
+                            <Ionicons name="close" size={24} color="#666" />
+                        </TouchableOpacity>
+                    </View>
+                    
+                    <ScrollView style={styles.shareOptionsContainer}>
+                        <TouchableOpacity
+                            style={styles.shareOption}
+                            onPress={() => handleShare('summary')}
+                        >
+                            <View style={styles.shareOptionIcon}>
+                                <Ionicons name="document-text" size={24} color="#667eea" />
+                            </View>
+                            <View style={styles.shareOptionText}>
+                                <Text style={styles.shareOptionTitle}>Quick Summary</Text>
+                                <Text style={styles.shareOptionDescription}>
+                                    Share trip highlights and basic details
+                                </Text>
+                            </View>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={styles.shareOption}
+                            onPress={() => handleShare('full')}
+                        >
+                            <View style={styles.shareOptionIcon}>
+                                <Ionicons name="document" size={24} color="#10ac84" />
+                            </View>
+                            <View style={styles.shareOptionText}>
+                                <Text style={styles.shareOptionTitle}>Complete Plan</Text>
+                                <Text style={styles.shareOptionDescription}>
+                                    Share the full detailed itinerary
+                                </Text>
+                            </View>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={styles.shareOption}
+                            onPress={() => handleShare('link')}
+                        >
+                            <View style={styles.shareOptionIcon}>
+                                <Ionicons name="link" size={24} color="#ff6b6b" />
+                            </View>
+                            <View style={styles.shareOptionText}>
+                                <Text style={styles.shareOptionTitle}>Share Link</Text>
+                                <Text style={styles.shareOptionDescription}>
+                                    Share a link to view the trip
+                                </Text>
+                            </View>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={styles.shareOption}
+                            onPress={() => handleShare('default')}
+                        >
+                            <View style={styles.shareOptionIcon}>
+                                <Ionicons name="share-social" size={24} color="#764ba2" />
+                            </View>
+                            <View style={styles.shareOptionText}>
+                                <Text style={styles.shareOptionTitle}>Social Media</Text>
+                                <Text style={styles.shareOptionDescription}>
+                                    Perfect for sharing on social platforms
+                                </Text>
+                            </View>
+                        </TouchableOpacity>
+                    </ScrollView>
+                </View>
+            </View>
+        </Modal>
+    );
+
+    const renderImageGallery = (images, title) => {
+        if (!images || images.length === 0) return null;
+
+        return (
+            <View style={styles.imageGallery}>
+                <Text style={styles.imageGalleryTitle}>{title}</Text>
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.imageScrollContainer}
+                >
+                    {images.slice(0, 5).map((image, index) => (
+                        <View key={`${image.id || 'img'}-${index}`} style={styles.imageContainer}>
+                            <Image
+                                source={{ uri: image.thumbnail || image.url }}
+                                style={styles.placeImage}
+                                defaultSource={{ uri: 'https://picsum.photos/200/150?random=' + index }}
+                            />
+                            {image.description && (
+                                <Text style={styles.imageDescription} numberOfLines={2}>
+                                    {image.description}
+                                </Text>
+                            )}
+                        </View>
+                    ))}
+                </ScrollView>
+            </View>
+        );
     };
 
     const renderStructuredContent = (content, sectionType) => {
@@ -241,6 +567,9 @@ const TripDetails = () => {
     };
 
     const renderPlanSection = (section, index) => {
+        const sectionImages = getSectionImages(section);
+        const hasImages = sectionImages && sectionImages.length > 0;
+
         return (
             <Animated.View
                 key={`${section.type}-${index}`}
@@ -269,11 +598,29 @@ const TripDetails = () => {
                     <Text style={styles.sectionTitle}>{section.title}</Text>
                 </View>
 
+                {/* Show relevant images */}
+                {hasImages && renderImageGallery(sectionImages, `${section.title} - Visual Guide`)}
+
                 <View style={styles.sectionContent}>
                     {renderStructuredContent(section.content, section.type)}
                 </View>
             </Animated.View>
         );
+    };
+
+    const getSectionImages = (section) => {
+        switch (section.type) {
+            case 'hotels':
+                return Object.values(hotelImages).flat().slice(0, 5);
+            case 'places':
+                return Object.values(placeImages).filter(img => Array.isArray(img)).flat().slice(0, 5);
+            case 'activities':
+                return placeImages.activities ? Object.values(placeImages.activities).flat().slice(0, 5) : [];
+            case 'overview':
+                return placeImages.general || [];
+            default:
+                return null;
+        }
     };
 
     const getSectionColors = (type, index) => {
@@ -313,14 +660,8 @@ const TripDetails = () => {
                 <StatusBar barStyle="light-content" backgroundColor="#667eea" />
                 <SafeAreaView style={styles.container}>
                     <View style={styles.loadingContent}>
-                        <View style={styles.loadingIconContainer}>
-                            <Ionicons name="airplane" size={50} color="white" />
-                        </View>
-                        <ActivityIndicator size="large" color="white" style={styles.loadingIndicator} />
-                        <Text style={styles.loadingTitle}>Loading Your Trip</Text>
-                        <Text style={styles.loadingSubtitle}>
-                            Retrieving your saved travel plan...
-                        </Text>
+                        <ActivityIndicator size="large" color="white" />
+                        <Text style={styles.loadingTitle}>Loading Trip Details...</Text>
                     </View>
                 </SafeAreaView>
             </LinearGradient>
@@ -337,7 +678,7 @@ const TripDetails = () => {
                 <SafeAreaView style={styles.container}>
                     <View style={styles.errorContent}>
                         <Ionicons name="alert-circle" size={80} color="white" />
-                        <Text style={styles.errorTitle}>Trip Not Found</Text>
+                        <Text style={styles.errorTitle}>Error</Text>
                         <Text style={styles.errorText}>{error}</Text>
                         <TouchableOpacity
                             style={styles.retryButton}
@@ -349,10 +690,6 @@ const TripDetails = () => {
                 </SafeAreaView>
             </LinearGradient>
         );
-    }
-
-    if (!tripData) {
-        return null;
     }
 
     return (
@@ -377,17 +714,33 @@ const TripDetails = () => {
                     >
                         <View style={styles.iconContainer}>
                             <View style={styles.iconBackground}>
-                                <Ionicons name="map" size={50} color="white" />
+                                <Ionicons name="map" size={35} color="white" />
                             </View>
                         </View>
 
-                        <Text style={styles.mainTitle}>Your Saved Trip</Text>
+                        <Text style={styles.mainTitle}>{tripData?.destination}</Text>
                         <Text style={styles.subtitle}>
-                            {tripData.destination} • {tripData.totalDays} days
+                            {tripData?.totalDays} days • {tripData?.travelers}
                         </Text>
-                        <Text style={styles.dateSubtitle}>
-                            Saved on {moment(tripData.createdAt).format('MMM DD, YYYY')}
+                        <Text style={styles.dateText}>
+                            {moment(tripData?.startDate).format('MMM DD')} - {moment(tripData?.endDate).format('MMM DD, YYYY')}
                         </Text>
+
+                        {/* Trip Status Indicators */}
+                        <View style={styles.statusContainer}>
+                            {isSaved && (
+                                <View style={styles.statusBadge}>
+                                    <Ionicons name="checkmark-circle" size={16} color="#10ac84" />
+                                    <Text style={styles.statusText}>Saved</Text>
+                                </View>
+                            )}
+                            {isFavorite && (
+                                <View style={[styles.statusBadge, styles.favoriteBadge]}>
+                                    <Ionicons name="heart" size={16} color="#ff6b6b" />
+                                    <Text style={[styles.statusText, styles.favoriteText]}>Favorite</Text>
+                                </View>
+                            )}
+                        </View>
                     </Animated.View>
 
                     {/* Content Section */}
@@ -418,40 +771,77 @@ const TripDetails = () => {
                                     <View style={styles.summaryItem}>
                                         <Ionicons name="location" size={20} color="#667eea" />
                                         <Text style={styles.summaryLabel}>Destination</Text>
-                                        <Text style={styles.summaryValue}>{tripData.destination}</Text>
+                                        <Text style={styles.summaryValue}>{tripData?.destination}</Text>
                                     </View>
                                     <View style={styles.summaryItem}>
                                         <Ionicons name="people" size={20} color="#667eea" />
                                         <Text style={styles.summaryLabel}>Travelers</Text>
-                                        <Text style={styles.summaryValue}>{tripData.travelers}</Text>
+                                        <Text style={styles.summaryValue}>{tripData?.travelers}</Text>
                                     </View>
                                 </View>
                                 <View style={styles.summaryRow}>
                                     <View style={styles.summaryItem}>
                                         <Ionicons name="calendar" size={20} color="#667eea" />
                                         <Text style={styles.summaryLabel}>Duration</Text>
-                                        <Text style={styles.summaryValue}>{tripData.totalDays} days</Text>
+                                        <Text style={styles.summaryValue}>{tripData?.totalDays} days</Text>
                                     </View>
                                     <View style={styles.summaryItem}>
                                         <Ionicons name="wallet" size={20} color="#667eea" />
                                         <Text style={styles.summaryLabel}>Budget</Text>
-                                        <Text style={styles.summaryValue}>{tripData.budget}</Text>
+                                        <Text style={styles.summaryValue}>{tripData?.budget}</Text>
                                     </View>
+                                </View>
+
+                                {/* Action Buttons */}
+                                <View style={styles.actionButtonsContainer}>
+                                    <TouchableOpacity
+                                        style={[styles.actionButton, isFavorite && styles.favoriteButton]}
+                                        onPress={handleFavoriteToggle}
+                                        disabled={isProcessingFavorite}
+                                    >
+                                        <Ionicons 
+                                            name={isFavorite ? "heart" : "heart-outline"} 
+                                            size={16} 
+                                            color={isFavorite ? "#ff6b6b" : "#667eea"} 
+                                        />
+                                        <Text style={[
+                                            styles.actionButtonText,
+                                            isFavorite && styles.favoriteButtonText
+                                        ]}>
+                                            {isFavorite ? "Favorited" : "Add to Favorites"}
+                                        </Text>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity
+                                        style={styles.actionButton}
+                                        onPress={() => setShowShareModal(true)}
+                                    >
+                                        <Ionicons name="share" size={16} color="#667eea" />
+                                        <Text style={styles.actionButtonText}>Share Trip</Text>
+                                    </TouchableOpacity>
                                 </View>
                             </Animated.View>
 
                             {/* Travel Plan Sections */}
+                            {loadingImages && (
+                                <View style={styles.loadingImagesContainer}>
+                                    <ActivityIndicator size="small" color="#667eea" />
+                                    <Text style={styles.loadingImagesText}>Loading destination images...</Text>
+                                </View>
+                            )}
+
                             {parsedPlan ? (
                                 parsedPlan.map((section, index) => renderPlanSection(section, index))
                             ) : (
                                 <View style={styles.planSection}>
-                                    <Text style={styles.planText}>{travelPlan}</Text>
+                                    <Text style={styles.planText}>{tripData?.travelPlan}</Text>
                                 </View>
                             )}
                         </ScrollView>
                     </Animated.View>
                 </SafeAreaView>
             </LinearGradient>
+            <ShareModal />
         </>
     );
 };
@@ -479,6 +869,27 @@ const styles = StyleSheet.create({
         shadowRadius: 3.84,
         elevation: 5,
     },
+    headerRightContainer: {
+        flexDirection: 'row',
+        marginRight: 10,
+    },
+    headerButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginLeft: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        elevation: 5,
+    },
+    headerButtonDisabled: {
+        opacity: 0.6,
+    },
     shareButton: {
         width: 40,
         height: 40,
@@ -497,7 +908,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingTop: 100,
         paddingHorizontal: 25,
-        paddingBottom: 40,
+        paddingBottom: 30,
     },
     iconContainer: {
         marginBottom: 25,
@@ -533,12 +944,41 @@ const styles = StyleSheet.create({
         lineHeight: 22,
         marginBottom: 5,
     },
-    dateSubtitle: {
+    dateText: {
         fontSize: 14,
-        color: 'rgba(255, 255, 255, 0.7)',
+        color: 'rgba(255, 255, 255, 0.8)',
         textAlign: 'center',
         fontFamily: 'poppins',
-        fontStyle: 'italic',
+        marginBottom: 15,
+    },
+    statusContainer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: 10,
+    },
+    statusBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.3)',
+    },
+    favoriteBadge: {
+        backgroundColor: 'rgba(255, 107, 107, 0.2)',
+        borderColor: 'rgba(255, 107, 107, 0.3)',
+    },
+    statusText: {
+        color: 'white',
+        fontSize: 12,
+        fontFamily: 'poppins-Medium',
+        marginLeft: 6,
+    },
+    favoriteText: {
+        color: '#ff6b6b',
     },
     contentContainer: {
         flex: 1,
@@ -587,6 +1027,56 @@ const styles = StyleSheet.create({
         fontFamily: 'poppins-Medium',
         textAlign: 'center',
     },
+    actionButtonsContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginTop: 20,
+        paddingTop: 20,
+        borderTopWidth: 1,
+        borderTopColor: '#f0f0f0',
+        gap: 10,
+    },
+    actionButton: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#f8f9fa',
+        paddingVertical: 12,
+        paddingHorizontal: 15,
+        borderRadius: 15,
+        borderWidth: 1,
+        borderColor: '#e9ecef',
+    },
+    favoriteButton: {
+        backgroundColor: '#fff5f5',
+        borderColor: '#fed7d7',
+    },
+    actionButtonText: {
+        color: '#667eea',
+        fontSize: 14,
+        fontFamily: 'poppins-Medium',
+        marginLeft: 6,
+    },
+    favoriteButtonText: {
+        color: '#ff6b6b',
+    },
+    loadingImagesContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#f8f9fa',
+        padding: 15,
+        borderRadius: 15,
+        marginBottom: 20,
+    },
+    loadingImagesText: {
+        fontSize: 14,
+        color: '#666',
+        fontFamily: 'poppins',
+        marginLeft: 10,
+        fontStyle: 'italic',
+    },
     planSection: {
         backgroundColor: 'white',
         borderRadius: 20,
@@ -627,6 +1117,7 @@ const styles = StyleSheet.create({
     },
     sectionContent: {
         paddingLeft: 48,
+   
     },
     planText: {
         fontSize: 16,
@@ -642,6 +1133,7 @@ const styles = StyleSheet.create({
         marginBottom: 8,
         borderLeftWidth: 3,
         borderLeftColor: '#667eea',
+      
     },
     itemTitle: {
         fontSize: 17,
@@ -679,6 +1171,47 @@ const styles = StyleSheet.create({
         marginLeft: 8,
         flex: 1,
     },
+    imageGallery: {
+        marginBottom: 20,
+    },
+    imageGalleryTitle: {
+        fontSize: 16,
+        color: '#333',
+        fontFamily: 'poppins-Bold',
+        marginBottom: 12,
+        paddingLeft: 48,
+    },
+    imageScrollContainer: {
+        paddingLeft: 48,
+        paddingRight: 25,
+    },
+    imageContainer: {
+        marginRight: 15,
+        width: 200,
+        borderRadius: 15,
+        overflow: 'hidden',
+        backgroundColor: '#f5f5f5',
+        elevation: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 6,
+    },
+    placeImage: {
+        width: '100%',
+        height: 130,
+        borderTopLeftRadius: 15,
+        borderTopRightRadius: 15,
+        resizeMode: 'cover',
+    },
+    imageDescription: {
+        padding: 10,
+        fontSize: 14,
+        color: '#333',
+        fontFamily: 'poppins',
+        lineHeight: 18,
+        backgroundColor: '#fff',
+    },
     // Loading states
     loadingContainer: {
         flex: 1,
@@ -689,26 +1222,12 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: 40,
     },
-    loadingIconContainer: {
-        marginBottom: 30,
-    },
-    loadingIndicator: {
-        marginBottom: 30,
-    },
     loadingTitle: {
         fontSize: 24,
         color: 'white',
         fontFamily: 'poppins-Bold',
         textAlign: 'center',
-        marginBottom: 15,
-    },
-    loadingSubtitle: {
-        fontSize: 16,
-        color: 'rgba(255, 255, 255, 0.8)',
-        fontFamily: 'poppins',
-        textAlign: 'center',
-        marginBottom: 40,
-        lineHeight: 22,
+        marginTop: 20,
     },
     // Error states
     errorContent: {
@@ -745,5 +1264,86 @@ const styles = StyleSheet.create({
         color: 'white',
         fontSize: 16,
         fontFamily: 'poppins-Medium',
+    },
+    // Modal styles
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'flex-end',
+    },
+    modalContent: {
+        backgroundColor: 'white',
+        borderTopLeftRadius: 25,
+        borderTopRightRadius: 25,
+        paddingTop: 20,
+        paddingBottom: 40,
+        minHeight: 400,
+        maxHeight: '80%',
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingBottom: 20,
+        borderBottomWidth: 1,
+        borderBottomColor: '#f0f0f0',
+    },
+    modalTitle: {
+        fontSize: 20,
+        fontFamily: 'poppins-Bold',
+        color: '#333',
+    },
+    modalCloseButton: {
+        width: 30,
+        height: 30,
+        borderRadius: 15,
+        backgroundColor: '#f5f5f5',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    shareOptionsContainer: {
+        paddingHorizontal: 20,
+        paddingTop: 20,
+    },
+    shareOption: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 15,
+        paddingHorizontal: 15,
+        marginBottom: 10,
+        backgroundColor: '#f8f9fa',
+        borderRadius: 15,
+        borderWidth: 1,
+        borderColor: '#e9ecef',
+    },
+    shareOptionIcon: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        backgroundColor: 'white',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 15,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    shareOptionText: {
+        flex: 1,
+    },
+    shareOptionTitle: {
+        fontSize: 16,
+        fontFamily: 'poppins-Bold',
+        color: '#333',
+        marginBottom: 2,
+    },
+    shareOptionDescription: {
+        fontSize: 13,
+        fontFamily: 'poppins',
+        color: '#666',
+        lineHeight: 18,
     },
 });
