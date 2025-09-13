@@ -22,7 +22,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { app, db } from '../../configs/FirebaseConfig.jsx';
+import { app, db } from '../../../configs/FirebaseConfig.jsx';
 
 const { width } = Dimensions.get('window');
 
