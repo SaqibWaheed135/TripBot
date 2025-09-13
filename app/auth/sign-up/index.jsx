@@ -58,7 +58,7 @@ const SignUp = () => {
       const user = userCredential.user;
 
       console.log('Signed in user:', user);
-      Alert.alert('Sign-up Success');
+     
       router.replace('/mytrip');
     } catch (error) {
       console.error('Google Sign-Up Error:', error);

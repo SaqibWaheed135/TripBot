@@ -1,8 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { getAuth, signOut } from 'firebase/auth';
+import { getAuth } from 'firebase/auth';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -30,21 +29,7 @@ const MyTrip = () => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(-20)).current;
 
-  const handleLogout = async () => {
-    try {
-      // Firebase sign out
-      await signOut(getAuth());
-
-      // Google sign out
-      await GoogleSignin.signOut();
-
-      // Navigate to login screen
-      router.replace('/auth/sign-in');
-    } catch (error) {
-      console.error('Logout Error:', error);
-      Alert.alert('Logout Failed', error.message || 'Something went wrong');
-    }
-  };
+ 
 
   // Function to fetch user trips from Firestore
  // Updated fetchUserTrips function in MyTrip screen
@@ -264,9 +249,7 @@ const fetchUserTrips = async () => {
             <View style={styles.headerContent}>
               <View style={styles.headerLeft}>
                 <Text style={styles.headerTitle}>My Trips</Text>
-                <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-                  <Text style={styles.logoutText}>Logout</Text>
-                </TouchableOpacity>
+             
 
                 <Text style={styles.headerSubtitle}>
                   {userTrips.length === 0
@@ -353,7 +336,7 @@ const fetchUserTrips = async () => {
                     <Text style={styles.quickActionText}>Plan New Trip</Text>
                   </TouchableOpacity>
 
-                  <TouchableOpacity style={styles.quickActionButton}>
+                  <TouchableOpacity style={styles.quickActionButton} onPress={()=>router.push('/discover')}>
                     <View style={styles.quickActionIcon}>
                       <Ionicons name="compass" size={24} color="#10ac84" />
                     </View>
@@ -486,7 +469,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   tripsHeaderTitle: {
-    fontSize: 24,
+    fontSize: 20,
     color: '#333',
     fontFamily: 'poppins-Bold',
   },
@@ -568,10 +551,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   tripDestination: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: 'bold',
     color: '#333',
-    fontFamily: 'poppins-Bold',
+     fontFamily: 'poppins-Bold',
     marginBottom: 4,
   },
   tripDates: {
@@ -657,22 +640,5 @@ const styles = StyleSheet.create({
     fontFamily: 'poppins',
     textAlign: 'center',
   },
-  logoutButton: {
-    marginTop: 20,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    backgroundColor: '#ff6b6b',
-    borderRadius: 10,
-    alignSelf: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 5,
-  },
-  logoutText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
+
 });

@@ -54,7 +54,7 @@ const SignIn = () => {
       const user = userCredential.user;
 
       console.log('Signed in user:', user);
-      Alert.alert('Sign-in Success');
+     
 
       router.replace('/mytrip');
     } catch (error) {

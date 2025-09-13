@@ -165,21 +165,21 @@ const Profile = () => {
       id: 'favorites',
       title: 'Favorite Places',
       icon: 'heart-outline',
-      onPress: () =>() => router.push('/create-trip/favorite-trips'),
+      onPress: () =>() => router.push('/favorite-places'),
       color: '#ff6b6b'
     },
     {
       id: 'settings',
       title: 'Settings',
       icon: 'settings-outline',
-      onPress: () => Alert.alert('Coming Soon', 'This feature is coming soon!'),
+      onPress: () => router.push('/settings'),
       color: '#57606f'
     },
     {
       id: 'help',
       title: 'Help & Support',
       icon: 'help-circle-outline',
-      onPress: () => Alert.alert('Coming Soon', 'This feature is coming soon!'),
+      onPress: () =>router.push('/help-support'),
       color: '#3742fa'
     },
     {
