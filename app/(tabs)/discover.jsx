@@ -38,6 +38,7 @@ const Discover = () => {
     const [refreshing, setRefreshing] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [showSearch, setShowSearch] = useState(false);
+    const [error, setError] = useState('');
 
     const categories = [
         { id: 'trending', name: 'Trending', icon: 'trending-up', color: '#ff6b6b' },
@@ -50,156 +51,26 @@ const Discover = () => {
         { id: 'luxury', name: 'Luxury', icon: 'diamond', color: '#8e44ad' }
     ];
 
-    // Sample trip ideas data - In real app, this would come from Gemini API
-    const sampleTripIdeas = {
-        trending: [
-            {
-                id: '1',
-                destination: 'Bali, Indonesia',
-                title: 'Tropical Paradise Escape',
-                description: 'Experience stunning beaches, ancient temples, and vibrant culture',
-                duration: '7-10 days',
-                budget: '$800-1500',
-                rating: 4.8,
-                imageUrl: 'https://images.unsplash.com/photo-1537953773345-d172ccf13cf1?w=400&h=250&fit=crop',
-                highlights: ['Beach resorts', 'Temple tours', 'Rice terraces', 'Balinese cuisine'],
-                bestTime: 'Apr-Oct'
-            },
-            {
-                id: '2',
-                destination: 'Istanbul, Turkey',
-                title: 'Where Europe Meets Asia',
-                description: 'Rich history, stunning architecture, and amazing street food',
-                duration: '5-7 days',
-                budget: '$600-1200',
-                rating: 4.7,
-                imageUrl: 'https://images.unsplash.com/photo-1541432901042-2d8bd64b4a9b?w=400&h=250&fit=crop',
-                highlights: ['Hagia Sophia', 'Grand Bazaar', 'Bosphorus cruise', 'Turkish baths'],
-                bestTime: 'Mar-May, Sep-Nov'
-            },
-            {
-                id: '3',
-                destination: 'Cape Town, South Africa',
-                title: 'Adventure at the Tip of Africa',
-                description: 'Stunning landscapes, wine tours, and wildlife experiences',
-                duration: '8-12 days',
-                budget: '$900-1800',
-                rating: 4.9,
-                imageUrl: 'https://images.unsplash.com/photo-1580060839134-75a5edca2e99?w=400&h=250&fit=crop',
-                highlights: ['Table Mountain', 'Wine regions', 'Penguin colonies', 'Safari tours'],
-                bestTime: 'Nov-Mar'
-            }
-        ],
-        adventure: [
-            {
-                id: '4',
-                destination: 'Nepal Himalayas',
-                title: 'Everest Base Camp Trek',
-                description: 'Challenge yourself with the world\'s most famous trek',
-                duration: '12-16 days',
-                budget: '$1200-2500',
-                rating: 4.8,
-                imageUrl: 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=400&h=250&fit=crop',
-                highlights: ['Mountain views', 'Sherpa culture', 'Base camp', 'Buddhist monasteries'],
-                bestTime: 'Mar-May, Sep-Nov'
-            },
-            {
-                id: '5',
-                destination: 'Patagonia, Chile',
-                title: 'Wild Landscapes Adventure',
-                description: 'Glaciers, mountains, and pristine wilderness',
-                duration: '10-14 days',
-                budget: '$1500-3000',
-                rating: 4.9,
-                imageUrl: 'https://images.unsplash.com/photo-1551632436-cbf8dd35adfa?w=400&h=250&fit=crop',
-                highlights: ['Torres del Paine', 'Glacier hiking', 'Wildlife spotting', 'Camping'],
-                bestTime: 'Nov-Mar'
-            }
-        ],
-        relaxation: [
-            {
-                id: '6',
-                destination: 'Maldives',
-                title: 'Overwater Villa Paradise',
-                description: 'Crystal clear waters and luxury resorts',
-                duration: '5-8 days',
-                budget: '$2000-5000',
-                rating: 4.9,
-                imageUrl: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=250&fit=crop',
-                highlights: ['Overwater villas', 'Spa treatments', 'Snorkeling', 'Sunset cruises'],
-                bestTime: 'Nov-Apr'
-            }
-        ],
-        cultural: [
-            {
-                id: '7',
-                destination: 'Kyoto, Japan',
-                title: 'Ancient Temples & Modern Culture',
-                description: 'Traditional architecture, gardens, and Japanese culture',
-                duration: '6-9 days',
-                budget: '$1000-2200',
-                rating: 4.8,
-                imageUrl: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=400&h=250&fit=crop',
-                highlights: ['Bamboo forests', 'Temple visits', 'Tea ceremonies', 'Cherry blossoms'],
-                bestTime: 'Mar-May, Sep-Nov'
-            }
-        ],
-        romantic: [
-            {
-                id: '8',
-                destination: 'Santorini, Greece',
-                title: 'Sunset Romance',
-                description: 'White-washed buildings and stunning sunsets',
-                duration: '4-7 days',
-                budget: '$1200-2500',
-                rating: 4.9,
-                imageUrl: 'https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?w=400&h=250&fit=crop',
-                highlights: ['Sunset views', 'Wine tasting', 'Beach clubs', 'Luxury hotels'],
-                bestTime: 'Apr-Oct'
-            }
-        ],
-        family: [
-            {
-                id: '9',
-                destination: 'Orlando, Florida',
-                title: 'Theme Park Capital',
-                description: 'Magic and adventure for the whole family',
-                duration: '5-8 days',
-                budget: '$1500-3500',
-                rating: 4.7,
-                imageUrl: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&h=250&fit=crop',
-                highlights: ['Disney World', 'Universal Studios', 'Water parks', 'Family resorts'],
-                bestTime: 'Sep-Nov, Jan-Apr'
-            }
-        ],
-        budget: [
-            {
-                id: '10',
-                destination: 'Vietnam',
-                title: 'Southeast Asia on a Budget',
-                description: 'Amazing food, culture, and landscapes for less',
-                duration: '10-15 days',
-                budget: '$400-800',
-                rating: 4.6,
-                imageUrl: 'https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?w=400&h=250&fit=crop',
-                highlights: ['Street food', 'Ha Long Bay', 'Ancient towns', 'Motorbike tours'],
-                bestTime: 'Mar-May, Sep-Nov'
-            }
-        ],
-        luxury: [
-            {
-                id: '11',
-                destination: 'Dubai, UAE',
-                title: 'Opulent Desert Oasis',
-                description: 'Ultra-luxury experiences in a modern wonderland',
-                duration: '4-7 days',
-                budget: '$2500-6000',
-                rating: 4.8,
-                imageUrl: 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400&h=250&fit=crop',
-                highlights: ['Burj Khalifa', 'Luxury shopping', 'Desert safari', '7-star hotels'],
-                bestTime: 'Nov-Mar'
-            }
-        ]
+    // Unsplash image categories for different trip types
+    const getImageQuery = (category, destination) => {
+        const queries = {
+            trending: `${destination} travel destination`,
+            adventure: `${destination} adventure outdoor`,
+            relaxation: `${destination} beach resort spa`,
+            cultural: `${destination} culture heritage temple`,
+            romantic: `${destination} romantic sunset`,
+            family: `${destination} family vacation`,
+            budget: `${destination} backpacker travel`,
+            luxury: `${destination} luxury hotel resort`
+        };
+        return queries[category] || `${destination} travel`;
+    };
+
+    // Generate random Unsplash image URL
+    const generateImageUrl = (category, destination, index) => {
+        const query = getImageQuery(category, destination).replace(/\s+/g, '%20');
+        const seed = `${category}-${destination}-${index}`.replace(/\s+/g, '');
+        return `https://source.unsplash.com/400x250/?${query}&sig=${seed}`;
     };
 
     useEffect(() => {
@@ -245,21 +116,175 @@ const Discover = () => {
         loadTripIdeas();
     }, [activeCategory]);
 
-    const loadTripIdeas = () => {
-        setLoading(true);
-        // Simulate API call delay
-        setTimeout(() => {
-            setTripIdeas(sampleTripIdeas[activeCategory] || []);
-            setLoading(false);
-        }, 500);
+    const generateTripIdeas = async () => {
+        const categoryDescriptions = {
+            trending: 'currently popular and trending destinations that are getting a lot of attention from travelers',
+            adventure: 'exciting outdoor activities, extreme sports, hiking, mountaineering, and thrill-seeking experiences',
+            relaxation: 'peaceful, spa-focused, beach resorts, wellness retreats, and stress-relief destinations',
+            cultural: 'rich history, museums, local traditions, heritage sites, and authentic cultural experiences',
+            romantic: 'perfect for couples, honeymoons, romantic getaways, and intimate experiences',
+            family: 'kid-friendly activities, family resorts, educational experiences, and multi-generational travel',
+            budget: 'affordable destinations, backpacking, hostels, street food, and cost-effective travel',
+            luxury: 'high-end resorts, premium experiences, five-star accommodations, and exclusive services'
+        };
+
+        const prompt = `Generate 6 diverse and specific travel destination ideas for ${activeCategory} travel (${categoryDescriptions[activeCategory]}). 
+
+        For each destination, provide EXACTLY this JSON structure:
+        {
+            "destinations": [
+                {
+                    "destination": "City, Country",
+                    "title": "Compelling 4-6 word title",
+                    "description": "Engaging 1-sentence description (15-25 words)",
+                    "duration": "X-Y days",
+                    "budget": "$XXX-XXXX",
+                    "rating": 4.X,
+                    "highlights": ["highlight1", "highlight2", "highlight3", "highlight4"],
+                    "bestTime": "Month-Month or Season"
+                }
+            ]
+        }
+
+        Requirements:
+        - Include a mix of popular and lesser-known destinations
+        - Vary the continents and regions
+        - Make budgets realistic for ${activeCategory} travel
+        - Ratings should be between 4.5-4.9
+        - Duration should vary from 3-15 days
+        - Highlights should be specific to each destination
+        - Descriptions must be compelling and unique
+
+        Return ONLY valid JSON without any additional text or formatting.`;
+
+        const payload = {
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+                temperature: 0.8,
+                topK: 40,
+                topP: 0.95,
+                maxOutputTokens: 2048,
+            },
+        };
+
+        const apiKey = "AIzaSyDs_Z-o02L9FwIXjGqLGqCNpDMDOe4xLVw";
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`;
+
+        try {
+            let response;
+            let retryCount = 0;
+            const maxRetries = 3;
+            const baseDelay = 1000;
+
+            while (retryCount < maxRetries) {
+                response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    break;
+                } else if (response.status === 429) {
+                    const delay = baseDelay * Math.pow(2, retryCount);
+                    console.warn(`Rate limit hit. Retrying in ${delay / 1000} seconds...`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    retryCount++;
+                } else {
+                    const errorData = await response.json();
+                    throw new Error(`API error: ${response.status} - ${errorData.error?.message || response.statusText}`);
+                }
+            }
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch after ${maxRetries} retries.`);
+            }
+
+            const result = await response.json();
+
+            if (result.candidates && result.candidates.length > 0 &&
+                result.candidates[0].content && result.candidates[0].content.parts &&
+                result.candidates[0].content.parts.length > 0) {
+                
+                const generatedText = result.candidates[0].content.parts[0].text;
+                
+                try {
+                    // Clean the response to extract JSON
+                    const jsonMatch = generatedText.match(/\{[\s\S]*\}/);
+                    if (!jsonMatch) {
+                        throw new Error('No JSON found in response');
+                    }
+                    
+                    const parsedData = JSON.parse(jsonMatch[0]);
+                    
+                    if (parsedData.destinations && Array.isArray(parsedData.destinations)) {
+                        // Add IDs and image URLs to each destination
+                        const destinationsWithIds = parsedData.destinations.map((dest, index) => ({
+                            ...dest,
+                            id: `${activeCategory}-${Date.now()}-${index}`,
+                            imageUrl: generateImageUrl(activeCategory, dest.destination, index)
+                        }));
+                        
+                        return destinationsWithIds;
+                    } else {
+                        throw new Error('Invalid JSON structure');
+                    }
+                } catch (parseError) {
+                    console.error('JSON parsing error:', parseError);
+                    console.log('Raw response:', generatedText);
+                    throw new Error('Failed to parse destination data');
+                }
+            } else {
+                throw new Error('No destinations generated. Please try again.');
+            }
+        } catch (err) {
+            console.error('Error generating trip ideas:', err);
+            throw err;
+        }
     };
 
-    const handleRefresh = useCallback(() => {
+    const loadTripIdeas = async () => {
+        setLoading(true);
+        setError('');
+        
+        try {
+            const ideas = await generateTripIdeas();
+            setTripIdeas(ideas);
+        } catch (error) {
+            console.error('Error loading trip ideas:', error);
+            setError(`Failed to load trip ideas: ${error.message}`);
+            
+            // Fallback to a basic set if API fails
+            setTripIdeas([
+                {
+                    id: `fallback-${Date.now()}`,
+                    destination: 'Paris, France',
+                    title: 'City of Light Adventure',
+                    description: 'Discover iconic landmarks, world-class museums, and romantic atmosphere',
+                    duration: '5-7 days',
+                    budget: '$1200-2500',
+                    rating: 4.7,
+                    imageUrl: generateImageUrl(activeCategory, 'Paris France', 0),
+                    highlights: ['Eiffel Tower', 'Louvre Museum', 'Seine River', 'French Cuisine'],
+                    bestTime: 'Apr-Oct'
+                }
+            ]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleRefresh = useCallback(async () => {
         setRefreshing(true);
-        setTimeout(() => {
-            loadTripIdeas();
+        try {
+            const ideas = await generateTripIdeas();
+            setTripIdeas(ideas);
+            setError('');
+        } catch (error) {
+            setError(`Failed to refresh: ${error.message}`);
+        } finally {
             setRefreshing(false);
-        }, 1000);
+        }
     }, [activeCategory]);
 
     const handleCreateTripFromIdea = async (idea) => {
@@ -285,8 +310,13 @@ const Discover = () => {
                 category: activeCategory,
                 isFromIdea: true,
                 ideaId: idea.id,
+                imageUrl: idea.imageUrl,
+                highlights: idea.highlights,
+                rating: idea.rating,
+                bestTime: idea.bestTime,
                 createdAt: new Date().toISOString(),
-                status: 'draft'
+                status: 'draft',
+                isFavorite: false
             };
 
             const docRef = await addDoc(collection(db, 'UserTrips'), tripData);
@@ -368,6 +398,7 @@ const Discover = () => {
                         <Image
                             source={{ uri: item.imageUrl }}
                             style={styles.ideaImage}
+                            defaultSource={{ uri: 'https://source.unsplash.com/400x250/?travel' }}
                         />
                         <LinearGradient
                             colors={['transparent', 'rgba(0,0,0,0.7)']}
@@ -442,15 +473,23 @@ const Discover = () => {
             </View>
             <Text style={styles.emptyTitle}>No Ideas Found</Text>
             <Text style={styles.emptyMessage}>
-                Try selecting a different category or refresh to get new suggestions
+                {error ? error : "Try selecting a different category or refresh to get new suggestions"}
             </Text>
             <TouchableOpacity
                 style={styles.refreshButton}
                 onPress={handleRefresh}
             >
                 <Ionicons name="refresh" size={20} color="white" />
-                <Text style={styles.refreshButtonText}>Refresh Ideas</Text>
+                <Text style={styles.refreshButtonText}>Get New Ideas</Text>
             </TouchableOpacity>
+        </View>
+    );
+
+    const renderLoadingState = () => (
+        <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#667eea" />
+            <Text style={styles.loadingText}>AI is crafting amazing destinations...</Text>
+            <Text style={styles.loadingSubtext}>Finding the perfect {activeCategory} experiences for you</Text>
         </View>
     );
 
@@ -486,9 +525,9 @@ const Discover = () => {
                             </View>
                         </View>
 
-                        <Text style={styles.mainTitle}>Trip Ideas</Text>
+                        <Text style={styles.mainTitle}>AI Trip Ideas</Text>
                         <Text style={styles.subtitle}>
-                            AI-powered suggestions for your next adventure
+                            Personalized suggestions powered by Gemini AI
                         </Text>
 
                         {/* Search Bar */}
@@ -548,15 +587,12 @@ const Discover = () => {
                                 {categories.find(c => c.id === activeCategory)?.name} Trips
                             </Text>
                             <Text style={styles.contentSubtitle}>
-                                {filteredIdeas.length} destinations found
+                                {loading ? 'Generating ideas...' : `${filteredIdeas.length} AI-generated destinations`}
                             </Text>
                         </View>
 
                         {loading ? (
-                            <View style={styles.loadingContainer}>
-                                <ActivityIndicator size="large" color="#667eea" />
-                                <Text style={styles.loadingText}>Finding amazing destinations...</Text>
-                            </View>
+                            renderLoadingState()
                         ) : filteredIdeas.length === 0 ? (
                             renderEmptyState()
                         ) : (
@@ -580,9 +616,12 @@ const Discover = () => {
                     </Animated.View>
 
                     {/* Loading Overlay */}
-                    {loading && (
+                    {loading && !refreshing && (
                         <View style={styles.loadingOverlay}>
-                            <ActivityIndicator size="large" color="#667eea" />
+                            <View style={styles.loadingCard}>
+                                <ActivityIndicator size="large" color="#667eea" />
+                                <Text style={styles.loadingOverlayText}>AI is working its magic...</Text>
+                            </View>
                         </View>
                     )}
                 </SafeAreaView>
@@ -953,12 +992,22 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         paddingTop: 60,
+        paddingHorizontal: 30,
     },
     loadingText: {
-        fontSize: 16,
+        fontSize: 18,
         color: '#667eea',
-        fontFamily: 'poppins-Medium',
-        marginTop: 15,
+        fontFamily: 'poppins-Bold',
+        marginTop: 20,
+        textAlign: 'center',
+    },
+    loadingSubtext: {
+        fontSize: 14,
+        color: '#999',
+        fontFamily: 'poppins',
+        marginTop: 10,
+        textAlign: 'center',
+        lineHeight: 20,
     },
     loadingOverlay: {
         position: 'absolute',
@@ -966,9 +1015,27 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: 'rgba(255, 255, 255, 0.8)',
+        backgroundColor: 'rgba(255, 255, 255, 0.9)',
         justifyContent: 'center',
         alignItems: 'center',
         zIndex: 1000,
+    },
+    loadingCard: {
+        backgroundColor: 'white',
+        padding: 30,
+        borderRadius: 20,
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.1,
+        shadowRadius: 20,
+        elevation: 15,
+    },
+    loadingOverlayText: {
+        fontSize: 16,
+        color: '#667eea',
+        fontFamily: 'poppins-Medium',
+        marginTop: 15,
+        textAlign: 'center',
     },
 });
