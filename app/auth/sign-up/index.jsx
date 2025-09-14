@@ -163,7 +163,7 @@ const SignUp = () => {
                 <View style={styles.logoContainer}>
                   <Ionicons name="person-add" size={50} color="white" />
                 </View>
-                <Text style={styles.appName}>Join TripBot</Text>
+                <Text style={styles.appName}>Join TripBrain Planner</Text>
                 <Text style={styles.tagline}>Start your intelligent travel journey</Text>
               </View>
 

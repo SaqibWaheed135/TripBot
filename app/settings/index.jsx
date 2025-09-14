@@ -372,7 +372,7 @@ const Settings = () => {
                 },
                 {
                     icon: "star",
-                    title: "Rate TripBot",
+                    title: "Rate TripBrain Planner",
                     subtitle: "Leave a review on the app store",
                     type: "navigation",
                     onPress: () => openURL('https://apps.apple.com/app/tripbot')
@@ -649,7 +649,7 @@ const Settings = () => {
                         </View>
                         <Text style={styles.mainTitle}>Settings</Text>
                         <Text style={styles.subtitle}>
-                            Customize your TripBot experience
+                            Customize your TripBrain Planner experience
                         </Text>
                     </Animated.View>
 

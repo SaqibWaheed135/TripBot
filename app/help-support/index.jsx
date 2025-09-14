@@ -74,13 +74,13 @@ const HelpAndSupport = () => {
     const faqData = [
         {
             id: 1,
-            question: "How does TripBot generate travel plans?",
-            answer: "TripBot uses Google's Gemini AI to create personalized travel itineraries. Simply provide your destination, budget, travel dates, and preferences, and our AI will generate a detailed plan including places to visit, hotels, activities, and budget breakdown."
+            question: "How does TripBrain Planner generate travel plans?",
+            answer: "TripBrain Planner uses Google's Gemini AI to create personalized travel itineraries. Simply provide your destination, budget, travel dates, and preferences, and our AI will generate a detailed plan including places to visit, hotels, activities, and budget breakdown."
         },
         {
             id: 2,
             question: "Can I modify the generated trip plans?",
-            answer: "Currently, TripBot generates complete trip plans based on your inputs. While direct editing isn't available in this version, you can regenerate plans with different parameters or save multiple versions for comparison."
+            answer: "Currently, TripBrain Planner generates complete trip plans based on your inputs. While direct editing isn't available in this version, you can regenerate plans with different parameters or save multiple versions for comparison."
         },
         {
             id: 3,
@@ -89,8 +89,8 @@ const HelpAndSupport = () => {
         },
         {
             id: 4,
-            question: "Can I use TripBot offline?",
-            answer: "TripBot requires an internet connection to generate new trips using the Gemini AI. However, you can view previously saved trips offline. We recommend saving your favorite plans before traveling."
+            question: "Can I use TripBrain Planner offline?",
+            answer: "TripBrain Planner requires an internet connection to generate new trips using the Gemini AI. However, you can view previously saved trips offline. We recommend saving your favorite plans before traveling."
         },
         {
             id: 5,
@@ -104,8 +104,8 @@ const HelpAndSupport = () => {
         },
         {
             id: 7,
-            question: "Does TripBot work for international destinations?",
-            answer: "Yes! TripBot can generate plans for destinations worldwide. The AI considers local customs, visa requirements, best travel times, and regional attractions for international trips."
+            question: "Does TripBrain Planner work for international destinations?",
+            answer: "Yes! TripBrain Planner can generate plans for destinations worldwide. The AI considers local customs, visa requirements, best travel times, and regional attractions for international trips."
         },
         {
             id: 8,
@@ -304,7 +304,7 @@ const HelpAndSupport = () => {
             <View style={styles.modalOverlay}>
                 <View style={styles.modalContent}>
                     <View style={styles.modalHeader}>
-                        <Text style={styles.modalTitle}>How to Use TripBot</Text>
+                        <Text style={styles.modalTitle}>How to Use TripBrain Planner</Text>
                         <TouchableOpacity
                             onPress={() => setShowTutorialModal(false)}
                             style={styles.modalCloseButton}
@@ -345,7 +345,7 @@ const HelpAndSupport = () => {
                             <View style={styles.stepContent}>
                                 <Text style={styles.stepTitle}>Generate Your Plan</Text>
                                 <Text style={styles.stepDescription}>
-                                    TripBot's AI will create a personalized itinerary with places, hotels, and activities.
+                                    TripBrain Planner will create a personalized itinerary with places, hotels, and activities.
                                 </Text>
                             </View>
                         </View>
@@ -491,7 +491,7 @@ const HelpAndSupport = () => {
                             {/* App Info */}
                             <View style={styles.section}>
                                 <View style={styles.appInfo}>
-                                    <Text style={styles.appInfoTitle}>TripBot</Text>
+                                    <Text style={styles.appInfoTitle}>TripBrain Planner</Text>
                                     <Text style={styles.appInfoText}>Version 1.0.0</Text>
                                     <Text style={styles.appInfoText}>Powered by Google Gemini AI</Text>
                                     <TouchableOpacity

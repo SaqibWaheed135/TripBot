@@ -1,4 +1,4 @@
-package com.saqib135.TripBot
+package com.saqib135.tripbrainplanner
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build

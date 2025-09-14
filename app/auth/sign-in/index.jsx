@@ -135,7 +135,7 @@ const SignIn = () => {
                 <View style={styles.logoContainer}>
                   <Ionicons name="airplane" size={60} color="white" />
                 </View>
-                <Text style={styles.appName}>TripBot</Text>
+                <Text style={styles.appName}>TripBrain Planner</Text>
                 <Text style={styles.tagline}>Your Intelligent Travel Companion</Text>
               </View>
 

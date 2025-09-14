@@ -94,7 +94,7 @@ const Login = () => {
                 }
               ]}
             >
-              AI TripBot
+              TripBrain Planner
             </Animated.Text>
 
             <Animated.Text 

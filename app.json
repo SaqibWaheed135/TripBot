@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "TripBot",
-    "slug": "TripBot",
+    "name": "TripBrain Planner",
+    "slug": "tripbrain-planner",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/app-icon.png",
-    "scheme": "tripbot",
+    "scheme": "tripbrainplanner",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -17,7 +17,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.saqib135.TripBot",
+      "package": "com.saqib135.tripbrainplanner",
       "googleServicesFile": "./google-services.json"
     },
     "web": {
