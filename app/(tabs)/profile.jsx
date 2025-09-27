@@ -184,9 +184,9 @@ const Profile = () => {
     },
     {
       id: 'about',
-      title: 'About TripBot',
+      title: 'About TripBrain Planner',
       icon: 'information-circle-outline',
-      onPress: () => Alert.alert('TripBot', 'Your Intelligent Travel Companion\nVersion 1.0.0'),
+      onPress: () => Alert.alert('TripBrain Planner', 'Your Intelligent Travel Companion\nVersion 1.0.0'),
       color: '#ff6b6b'
     }
   ];
@@ -341,7 +341,7 @@ const Profile = () => {
 
               {/* App Info */}
               <View style={styles.appInfoContainer}>
-                <Text style={styles.appName}>TripBot</Text>
+                <Text style={styles.appName}>TripBrain Planner</Text>
                 <Text style={styles.appVersion}>Version 1.0.0</Text>
                 <Text style={styles.appDescription}>
                   Your intelligent travel companion for planning amazing adventures

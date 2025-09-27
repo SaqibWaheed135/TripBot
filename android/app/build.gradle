@@ -87,9 +87,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.saqib135.tripbrainplanner'
+    namespace 'com.saqib135.TripBot'
     defaultConfig {
-        applicationId 'com.saqib135.tripbrainplanner'
+        applicationId 'com.saqib135.TripBot'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

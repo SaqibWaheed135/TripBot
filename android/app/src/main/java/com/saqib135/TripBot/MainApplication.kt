@@ -1,4 +1,4 @@
-package com.saqib135.tripbrainplanner
+package com.saqib135.TripBot
 
 import android.app.Application
 import android.content.res.Configuration
